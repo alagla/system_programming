@@ -1,0 +1,103 @@
+INSTRUCTION FORMAT:
+opcode    destination-operand,  source-operand
+
+ADDRESSING MODES: 
+opcode    register, register
+opcode    register, immediate
+opcode    register, memory
+opcode    memory,   register
+opcode    memory,   immediate
+
+(memory to memory is illegal) 
+
+MOV INSTRUCTION:
+MOV   DEST,   SRC;      copy SRC into DEST
+MOV   DEST,   [SRC];    copy value at memory address SRC into DEST
+
+
+LEA INSTRUCTION:
+LEA   DEST,   [SRC];      compute address in SRC and copy into DEST
+
+MOV vs LEA:
+MOV   eax,   var      == lea eax, [var] ; i.e. mov r32, imm32
+LEA   eax,   [var+16] == mov eax, var+16
+LEA   eax,   [eax*4]  == shl eax, 2 ; but without setting flags
+
+MOV EDX, [EBX + 8*EAX + 4]
+LEA ESI, [EBX + 8*EAX + 4]
+
+
+PUSH INSTRUCTION:
+1- Store the pushed value at current address of ESP register.
+2- Decrement the ESP register to size of pushed value.
+
+
+ARRAY ADDRESSING:
+
+Let's assume that ebx is the base register and esi is the index register of the element. 4 is the scaling factor for dword array. 
+
+to read the value from array into eax:  
+MOV     eax,         [ebx+4*esi]  
+to store the value of eax into array: 
+MOV    [ebx+4*esi],  eax 
+
+The value of index register can be optionally scaled with 2, 4 or 8. In this example we can use a scaling factor 8 for a struct array in which each struct consists of 2 dwords. (in 386 legal scaling factors are 1, 2, 4 and 8).
+
+to read the value of 2nd dword from array into eax:
+MOV     eax,         [ebx+8*esi+4]
+
+
+DATATYPES:
+
+BINARY:
+0001 0010 00110100010101100111100010011010101111001101111011110001
+==== ==== ========------------------------------------------------
+   |    |        |                |                              |
+   4    8        16              32                             64 
+   N    B        W               DW                             QW
+
+HEX:    0123 4567 89AB CDEF
+qword   ==== ==== ==== ====
+dword   ==== ====
+word    ====
+byte    ==
+nibble  = 
+                                                              bit
+                                                nibble   =  4 bits
+                                   byte    =  2 nibbles  =  8 bits
+                       WORD    = 2 bytes   =  4 nibbles  = 16 bits
+           DWORD   = 2 WORDs   = 4 bytes   =  8 nibbles  = 32 bits
+QWORD  = 2 DWORDs  = 4 WORDs   = 8 bytes   = 16 nibbles  = 64 bits
+
+
+The low byte (bits 0 through 7) of each data type occupies the lowest address in memory and that address is also the address of the operand.
+
+
+64-BIT OPERATIONS:
+
+0x1122334455667788
+  ================  rax (64 bits)
+          ========  eax (32 bits)
+              ====  ax  (16 bits)
+              ==    ah   (8 bits)
+                ==  al  (8 bits)
+
+mov eax, 0x11112222 ; eax = 0x11112222
+mov ax,  0x3333     ; eax = 0x11113333 (low 16 bits changed)
+mov al,  0x44       ; eax = 0x11113344 (low 8 bits changed)
+mov ah,  0x55       ; eax = 0x11115544 (high 8 bits changed)
+xor ah,  ah         ; eax = 0x11110044 (high 8 bits cleared)
+mov eax, 0x11112222 ; eax = 0x11112222
+xor al,  al         ; eax = 0x11112200 (low 8 bits cleared)
+mov eax, 0x11112222 ; eax = 0x11112222
+xor ax, ax          ; eax = 0x11110000 (low 16 bits cleared)
+
+mov rax, 0x1111222233334444 ; rax = 0x1111222233334444
+mov eax, 0x55556666         ; actual: rax = 0x0000000055556666
+                            ; expected: rax = 0x1111222255556666
+                            ; upper 32 bits seem to be lost!
+mov rax, 0x1111222233334444 ; rax = 0x1111222233334444
+mov ax, 0x7777              ; rax = 0x1111222233337777 (works!)
+mov rax, 0x1111222233334444 ; rax = 0x1111222233334444
+xor eax, eax                ; actual: rax = 0x0000000000000000
+                            ; expected: rax = 0x1111222200000000
