@@ -1,0 +1,78 @@
+GDT stands for <em>Global Descriptor Table.
+The important thing here is the word table and by table Intel means array.
+
+Being <span style="text-decoration: line-through;">a table</span> an array it has elements, each element is called <strong>Descriptor</strong>. Of course each element can be indexed, i.e. it has an unique index
+
+The <em>segment selector</em> registers hold the index of a descriptor. The value into a segment selector register is called <em>selector</em>.
+
+However things are a bit more elaborated.
+An <em>index</em> <strong>is not</strong> a <em>selector</em>.
+
+Beside the <em>index</em>, a segment selector register, holds two more things:
+<ol>
+ 	<li>The privilege that the programmer want to use for accessing the <em>descriptor</em>. This is called <strong>RPL</strong> (Request Privilege Level) for every register but <code>CS</code> in which is called <strong>CPL</strong> (Current Privilege Level). The role <em>RPL</em> and <em>CPL</em> play in using the segment selector register is defined in Intel manuals and it is too long to be explained here.</li>
+ 	<li>The table to use for looking into. One table is the <em>GDT</em> the other one is the <em>LDT</em>. Again differences and uses are in the Intel manuals.</li>
+</ol>
+Whenever a program is loaded, the linking loader loads the "Segment Registers" with the appropriate selectors.
+A Segment Register ( e.g. CS, DS, SS, etc) is divided in two parts: Visible and Hidden.
+It is the visible part which is loaded by the loader with the appropriate value.
+This value is an index in GDT or LDT, depending on the T flag of the selector.
+The processor loads the hidden part by itself. The information in hidden part is the segment base address in the linear address space, segment limit, access information.
+
+So the informal rule is:
+
+<strong>selector</strong> = <em>index</em> + <em>table_to_use</em> + <em>privilege</em>
+<strong>table_to_use + index</strong> = <em>descriptor</em> = <em>all the information about the segment of memory to be used</em>
+
+where, of course, <code>+</code> does not mean arithmetic plus at all. The actual bit field for a segment selector register is
+15                                                 3    2        0
++--------------------------------------------------+----+--------+
+| Index                                            | T  |   RPL  |
++--------------------------------------------------+----+--------+
+
+T = Table Indicator:     0 = GDT, 1 = LDT
+
+
+So for example the value 05h select the descriptor with index 0 (in the <em>LDT</em> using <em>RPL</em>=1), which is invalid as Intel explicitly mandates to not use the descriptor 0.
+The first usable descriptor is accessible with the <em>selector</em> <code>08h</code> which select as table the <em>GDT</em> with <em>RPL</em>=0. The values <code>08h-0bh</code> all select the <em>descriptor</em> with index 1 in the <em>GDT</em>, just with different <em>RPL</em>.
+
+
+<strong>SUMMARY:</strong>
+linear_address = LDT[segment_selector] + offset
+linear_address = GDT[segment_selector] + offset
+
+Here's a complete ASCII art of the terminology
+<pre>&lt;---- Selector ----&gt;           Segment Selector Registers 
++--------------+-+--+          
+| Index        |T|PL| = DS  
++--------------+-+--+
+  (13-bits)     X XX --(2-bits)-> lower number higher privilege
+   |            |
+   |        0---+----------------------1
+   |        |          GDTR            |          LDTR
+   |        |   +-----------------+    |    +-----------------+
+   |        +-->|GDT base-address |    +--->|LDT base-address |
+   |            +-----------------+         +-----------------+
+  index         |    base + 1     |         |    base + 1     |
+   |            +-----------------+         +-----------------+
+   |            |                 |         |                 |
+   |            ...   ...   ... ...         ...   ...   ... ...
+   |            |                 |         |                 |
+   |            +-----------------+         +-----------------+
+   +----------->|  base + index   |         |  base + index   |
+                +-----------------+         +.................+
+                |                 |         |                 |
+                ...  ...  ...   ...         ...   ... ...   ...
+                
+Index = Offset within Descriptor Table
+T     = table index: 0=GDT, 1=LDT
+PL    = Requested Privilege Level (RPL) *
+* The RPL is compared against the Privilege Level encoded inside the Descriptor (Descriptor Privilege Level - DPL).
+Any mismatches and the request causes a Fault
+
+About how it is calculated and why we need it:
+Short answer: Read the Intel manual as it is the complete reference.
+
+Long answer: We, user mode programmers, don't calculate it. Since all this thing with the segments boils down to limiting the privileges of a program and since it is the OS that commands and not us, we simply use the value that the OS gives us (by loading our program basically) as the <em>GDT</em> and the <em>LDT</em> are set up by the OS and it is now willing to cooperate with us in any aspect of it.
+
+We need segments because in Real mode there were segments (Google for more info), because they can avoid relocation an gather isolation in absence of paging (Google for more info) and because segments now incorporates more info than a simply base offset and a limit. One of all: the <strong>Descriptor Privilege Level</strong> that limits the privileges of a user mode program.
