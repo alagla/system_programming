@@ -1,0 +1,70 @@
+The PC's Physical Address Space:
+
++------------------+  <- 0xFFFFFFFF (4GB)
+|      32-bit      |
+|  memory mapped   |
+|     devices      |
+|                  |
+/\/\/\/\/\/\/\/\/\/\
+/\/\/\/\/\/\/\/\/\/\
+|                  |
+|      Unused      |
+|                  |
++------------------+  <- depends on amount of RAM
+|                  |
+|                  |
+| Extended Memory  |
+|                  |
+|                  |
++------------------+  <- 0x00100000 (1MB)
+|     BIOS ROM     |
++------------------+  <- 0x000F0000 (960KB)
+|  16-bit devices, |
+|  expansion ROMs  |
++------------------+  <- 0x000C0000 (768KB)
+|   VGA Display    |
++------------------+  <- 0x000A0000 (640KB)
+|                  |
+|    Low Memory    |
+|                  |
++------------------+  <- 0x00000000
+
+The first PCs, which were based on the 16-bit Intel 8088 processor, were only capable of addressing 1MB of physical memory. 
+The most important part of this area is the Basic Input/Output System (BIOS), which occupies the 64KB region from 0x000F0000 through 0x000FFFFF.
+--------------------------------------------------------------
+Intel cpus start in REAL MODE with a 1MB address space. it's hard coded to start with CS:0xF0000 and IP:0xFFF0 
+real mode physical address = 16 * segment + offset.
+0xFFFF0 is 16 bytes before the end of the BIOS (0x100000).
+since the top of address space is mapped to BIOS it will start executing from there. this design ensures that the BIOS always gets control of the machine first after power-up.
+When the BIOS runs, it sets up an interrupt descriptor table and initializes various devices such as the VGA display. After initializing the PCI bus and all the important devices the BIOS knows about, it searches for a bootable device such as a floppy, hard drive, or CD-ROM. Eventually, when it finds a bootable disk, the BIOS reads the boot loader from the disk and transfers control to it.
+--------------------------------------------------------------
+hard disks for PCs are divided into 512 byte regions called sectors. A sector is the disk's minimum transfer granularity: each read or write operation must be one or more sectors in size and aligned on a sector boundary. If the disk is bootable, the first sector is called the boot sector, since this is where the boot loader code resides. When the BIOS finds a bootable floppy or hard disk, it loads the 512-byte boot sector into memory at physical addresses 0x7c00 through 0x7dff, and then uses a jmp instruction to set the CS:IP to 0000:7c00, passing control to the boot loader. Like the BIOS load address, these addresses are fairly arbitrary - but they are fixed and standardized for PCs.
+
+summary:
+The power supply starts the clock generator and asserts #POWERGOOD signal on the bus.
+CPU #RESET line is asserted (CPU now in real 8086 mode).
+%ds=%es=%fs=%gs=%ss=0, %cs=0xFFFF0000,%eip = 0x0000FFF0 (ROM BIOS POST code).
+All POST checks are performed with interrupts disabled.
+IVT (Interrupt Vector Table) initialised at address 0.
+The BIOS Bootstrap Loader function is invoked via int 0x19, with %dl containing the boot device 'drive number'. This loads track 0, sector 1 at physical address 0x7C00 (0x07C0:0000).
+
+                                    Memory
+                             +------------------+ <- 0x0000fa00 
+               +-----------  | [     BOOT1    ] | <- 0x00007e00
+               |             +------------------+
+          +----(--(BIOS)---  | [     BOOT0    ] | <- 0x00007c00
+          |    |             +------------------+
+          |    |             | [     stack    ] |
+          |    |             |                  |
+          |    |             +------------------+ <- 0x00000500
+          |  /------------\
+        +---+---+---\  /---+---\   /---+
+  Disk  |MBR|   |   /  \   |   /   \   |
+        |   |   |   \  /   |   \   /   |
+        +---+---+---/  \---+---/   \---+
+Sector    1   2   3      63  64 ...
+
+
+sources:
+http://www.tldp.org/LDP/lki/lki-1.html
+flint.cs.yale.edu/cs422/assignments/as1.html
