@@ -1,18 +1,18 @@
-GDT stands for <em>Global Descriptor Table.
+GDT stands for Global Descriptor Table.
 The important thing here is the word table and by table Intel means array.
 
-Being <span style="text-decoration: line-through;">a table</span> an array it has elements, each element is called <strong>Descriptor</strong>. Of course each element can be indexed, i.e. it has an unique index
+Being an array it has elements, each element is called Descriptor. Of course each element can be indexed, i.e. it has an unique index
 
-The <em>segment selector</em> registers hold the index of a descriptor. The value into a segment selector register is called <em>selector</em>.
+The segment selector registers hold the index of a descriptor. The value into a segment selector register is called selector.
 
 However things are a bit more elaborated.
-An <em>index</em> <strong>is not</strong> a <em>selector</em>.
+An index is not a selector.
 
-Beside the <em>index</em>, a segment selector register, holds two more things:
-<ol>
- 	<li>The privilege that the programmer want to use for accessing the <em>descriptor</em>. This is called <strong>RPL</strong> (Request Privilege Level) for every register but <code>CS</code> in which is called <strong>CPL</strong> (Current Privilege Level). The role <em>RPL</em> and <em>CPL</em> play in using the segment selector register is defined in Intel manuals and it is too long to be explained here.</li>
- 	<li>The table to use for looking into. One table is the <em>GDT</em> the other one is the <em>LDT</em>. Again differences and uses are in the Intel manuals.</li>
-</ol>
+Beside the index, a segment selector register, holds two more things:
+
+ 	The privilege that the programmer want to use for accessing the descriptor. This is called RPL (Request Privilege Level) for every register but CS in which is called <strong>CPL</strong> (Current Privilege Level). The role <em>RPL</em> and <em>CPL</em> play in using the segment selector register is defined in Intel manuals and it is too long to be explained here.</li>
+ 	The table to use for looking into. One table is the GDT the other one is the LDT. Again differences and uses are in the Intel manuals.
+
 Whenever a program is loaded, the linking loader loads the "Segment Registers" with the appropriate selectors.
 A Segment Register ( e.g. CS, DS, SS, etc) is divided in two parts: Visible and Hidden.
 It is the visible part which is loaded by the loader with the appropriate value.
@@ -21,10 +21,10 @@ The processor loads the hidden part by itself. The information in hidden part is
 
 So the informal rule is:
 
-<strong>selector</strong> = <em>index</em> + <em>table_to_use</em> + <em>privilege</em>
-<strong>table_to_use + index</strong> = <em>descriptor</em> = <em>all the information about the segment of memory to be used</em>
+selector = <em>index</em> + <em>table_to_use</em> + <em>privilege</em>
+table_to_use + index</strong> = <em>descriptor</em> = <em>all the information about the segment of memory to be used</em>
 
-where, of course, <code>+</code> does not mean arithmetic plus at all. The actual bit field for a segment selector register is
+where, of course, + does not mean arithmetic plus at all. The actual bit field for a segment selector register is
 15                                                 3    2        0
 +--------------------------------------------------+----+--------+
 | Index                                            | T  |   RPL  |
@@ -37,12 +37,12 @@ So for example the value 05h select the descriptor with index 0 (in the <em>LDT<
 The first usable descriptor is accessible with the <em>selector</em> <code>08h</code> which select as table the <em>GDT</em> with <em>RPL</em>=0. The values <code>08h-0bh</code> all select the <em>descriptor</em> with index 1 in the <em>GDT</em>, just with different <em>RPL</em>.
 
 
-<strong>SUMMARY:</strong>
+SUMMARY:
 linear_address = LDT[segment_selector] + offset
 linear_address = GDT[segment_selector] + offset
 
 Here's a complete ASCII art of the terminology
-<pre>&lt;---- Selector ----&gt;           Segment Selector Registers 
+<---- Selector ----->           Segment Selector Registers 
 +--------------+-+--+          
 | Index        |T|PL| = DS  
 +--------------+-+--+
